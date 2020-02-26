@@ -14,7 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerina/bir;
 import ballerina/io;
 import ballerina/jvm;
 import ballerina/stringutils;
@@ -53,12 +52,12 @@ function emitStartObservationInvocation(jvm:MethodVisitor mv, int strandIndex, s
                 io:sprintf("(L%s;L%s;)L%s;", OBJECT, OBJECT, OBJECT), true);
             mv.visitInsn(POP);
         }
+        mv.visitMethodInsn(INVOKESTATIC, OBSERVE_UTILS, observationStartMethod,
+            io:sprintf("(L%s;L%s;L%s;L%s;)V", STRAND, STRING_VALUE, STRING_VALUE, MAP), false);
     } else {
-        mv.visitMethodInsn(INVOKESTATIC, "java/util/Collections", "emptyMap",
-            io:sprintf("()L%s;", MAP), false);
+        mv.visitMethodInsn(INVOKESTATIC, OBSERVE_UTILS, observationStartMethod,
+            io:sprintf("(L%s;L%s;L%s;)V", STRAND, STRING_VALUE, STRING_VALUE), false);
     }
-    mv.visitMethodInsn(INVOKESTATIC, OBSERVE_UTILS, observationStartMethod,
-        io:sprintf("(L%s;L%s;L%s;L%s;)V", STRAND, STRING_VALUE, STRING_VALUE, MAP), false);
 }
 
 function cleanUpServiceName(string serviceName) returns string {
@@ -82,27 +81,4 @@ function getFullQualifiedRemoteFunctionName(string moduleOrg, string moduleName,
         return funcName;
     }
     return moduleOrg + "/" + moduleName + "/" + funcName;
-}
-
-function isFunctionObserved(bir:Function func) returns boolean {
-    boolean isObserved = false;
-    string funcName = cleanupFunctionName(<@untainted> func.name.value);
-    if (funcName != "__init" && funcName != "$__init$") {
-        boolean isRemote = (func.flags & bir:REMOTE) == bir:REMOTE;
-        if (isRemote) {
-            isObserved = true;
-        } else {
-            foreach var attachment in func.annotAttachments {
-                if (attachment is bir:AnnotationAttachment) {
-                    string annotationFQN = attachment.moduleId.org + "/" + attachment.moduleId.name + "/"
-                        + attachment.annotTagRef.value;
-                    if (annotationFQN == OBSERVABLE_ANOTATION) {
-                        isObserved = true;
-                        break;
-                    }
-                }
-            }
-        }
-    }
-    return isObserved;
 }
