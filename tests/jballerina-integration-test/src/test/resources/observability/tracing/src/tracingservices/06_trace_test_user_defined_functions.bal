@@ -16,17 +16,16 @@
 
 import ballerina/http;
 import ballerina/testobserve;
-import ballerina/observe;
 
 @http:ServiceConfig {
     basePath:"/echoService"
 }
-service echoService5 on new http:Listener(9095) {
+service echoService0 on new http:Listener(9090) {
     resource function resourceOne (http:Caller caller, http:Request clientRequest) {
         http:Response outResponse = new;
-        var response = callNextResource5();
+        var response = callNextResource0();
         if (response is http:Response) {
-            outResponse.setTextPayload(getGreeting1());
+            outResponse.setTextPayload(sayHelloWorld());
             checkpanic caller->respond(outResponse);
         } else {
             error err = error ("error occurred");
@@ -36,7 +35,7 @@ service echoService5 on new http:Listener(9095) {
 
     resource function resourceTwo (http:Caller caller, http:Request clientRequest) {
         http:Response res = new;
-        res.setTextPayload(getGreeting2());
+        res.setTextPayload(sayHelloWorld2());
         checkpanic caller->respond(res);
     }
 
@@ -48,8 +47,8 @@ service echoService5 on new http:Listener(9095) {
     }
 }
 
-function callNextResource5() returns (http:Response | error) {
-    http:Client httpEndpoint = new("http://localhost:9095/echoService", {
+function callNextResource0() returns (http:Response | error) {
+    http:Client httpEndpoint = new("http://localhost:9090/echoService", {
             cache: {
                 enabled: false
             }
@@ -59,11 +58,11 @@ function callNextResource5() returns (http:Response | error) {
 }
 
 @observe:Observable
-public function getGreeting1() returns string {
+public function sayHelloWorld() returns string {
     return "Hello, World!";
 }
 
 @observe:Observable
-public function getGreeting2() returns string {
+public function sayHelloWorld2() returns string {
     return "Hello, World 2!";
 }
