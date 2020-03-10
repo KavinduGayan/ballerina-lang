@@ -292,8 +292,7 @@ public class JvmMethodGen {
         @Nilable Label tryStart = null;
         boolean isObserved = false;
         boolean isWorker = (func.flags & Flags.WORKER) == Flags.WORKER;
-        if ((isService || isWorker || "main".equals(funcName))
-                && !"__init".equals(funcName) && !"$__init$".equals(funcName)) {
+        if ((isService || isWorker) && !"__init".equals(funcName) && !"$__init$".equals(funcName)) {
             // create try catch block to start and stop observability.
             isObserved = true;
             tryStart = labelGen.getLabel("observe-try-start");
@@ -472,10 +471,10 @@ public class JvmMethodGen {
             // Catch Block
             mv.visitLabel(tryCatch);
             mv.visitVarInsn(ASTORE, catchVarIndex);
-            emitReportErrorInvocation(mv, catchVarIndex);
+            emitReportErrorInvocation(mv, localVarOffset, catchVarIndex);
 
             mv.visitLabel(tryCatchFinally);
-            emitStopObservationInvocation(mv);
+            emitStopObservationInvocation(mv, localVarOffset);
             // Re-throw caught error value
             mv.visitVarInsn(ALOAD, catchVarIndex);
             mv.visitInsn(ATHROW);
@@ -483,7 +482,7 @@ public class JvmMethodGen {
             // Finally Block
             mv.visitLabel(tryFinally);
             mv.visitVarInsn(ASTORE, throwableVarIndex);
-            emitStopObservationInvocation(mv);
+            emitStopObservationInvocation(mv, localVarOffset);
             mv.visitVarInsn(ALOAD, throwableVarIndex);
             mv.visitInsn(ATHROW);
         }
@@ -897,15 +896,8 @@ public class JvmMethodGen {
                             attachedTypeObj.tsymbol.pkgID.orgName.value,
                             attachedTypeObj.tsymbol.pkgID.name.value, serviceName);
                 }
-                Map<String, String> tags = new HashMap<>();
-                tags.put("source.invocation_fqn", String.format("%s:%s:%s:%s:%d:%d", module.org.value,
-                        module.name.value, module.version.value, func.pos.src.cUnitName, func.pos.sLine,
-                        func.pos.sCol));
-                if (isService) {
-                    tags.put("source.service", "true");
-                }
-                emitStartObservationInvocation(mv, serviceOrConnectorName, funcName,
-                        observationStartMethod, tags);
+                emitStartObservationInvocation(mv, localVarOffset, serviceOrConnectorName, funcName,
+                        observationStartMethod);
             }
 
             // generate instructions
@@ -2095,7 +2087,7 @@ public class JvmMethodGen {
         basicBlocks.add(typeOwnerCreateBB);
 
         nextBB.terminator = new Call(null, InstructionKind.CALL, false, modID, new Name(CURRENT_MODULE_INIT),
-                new ArrayList<>(), null, typeOwnerCreateBB, Collections.emptyList(), Collections.emptySet());
+                new ArrayList<>(), null, typeOwnerCreateBB);
 
         if (func.basicBlocks.size() == 0) {
             typeOwnerCreateBB.terminator = new Return(func.pos);
@@ -2177,12 +2169,11 @@ public class JvmMethodGen {
         // TODO remove once lang.annotation is fixed
         if (modId.orgName.value.equals(BALLERINA) && modId.name.value.equals(BUILT_IN_PACKAGE_NAME)) {
             lastBB.terminator = new Call(null, InstructionKind.CALL, false, modId,
-                    new Name(initFuncName), Collections.emptyList(), null, nextBB, Collections.emptyList(),
-                    Collections.emptySet());
+                    new Name(initFuncName), Collections.emptyList(), null, nextBB);
             return nextBB;
         }
         lastBB.terminator = new Call(null, InstructionKind.CALL, false, modId, new Name(initFuncName),
-                Collections.emptyList(), retVar, nextBB, Collections.emptyList(), Collections.emptySet());
+                Collections.emptyList(), retVar, nextBB);
 
         TypeTest typeTest = new TypeTest(null, symbolTable.errorType, boolRef, retVar);
         nextBB.instructions.add(typeTest);

@@ -18,21 +18,27 @@
 package org.wso2.ballerinalang.compiler.bir.codegen;
 
 import org.objectweb.asm.MethodVisitor;
+import org.wso2.ballerinalang.compiler.bir.model.BIRNode.BIRAnnotationAttachment;
+import org.wso2.ballerinalang.compiler.bir.model.BIRNode.BIRFunction;
+import org.wso2.ballerinalang.util.Flags;
 
 import java.util.Map;
+import java.util.Objects;
 
 import static org.objectweb.asm.Opcodes.ALOAD;
 import static org.objectweb.asm.Opcodes.DUP;
 import static org.objectweb.asm.Opcodes.INVOKEINTERFACE;
 import static org.objectweb.asm.Opcodes.INVOKESPECIAL;
 import static org.objectweb.asm.Opcodes.INVOKESTATIC;
+import static org.objectweb.asm.Opcodes.L2I;
 import static org.objectweb.asm.Opcodes.NEW;
 import static org.objectweb.asm.Opcodes.POP;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.ERROR_VALUE;
-import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.MAP_VALUE;
-import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.MAP_VALUE_IMPL;
+import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.MAP;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.OBJECT;
+import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.OBSERVABLE_ANNOTATION;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.OBSERVE_UTILS;
+import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.STRAND;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.STRING_VALUE;
 
 /**
@@ -42,35 +48,55 @@ import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.STRING_VA
  */
 class JvmObservabilityGen {
 
-    static void emitStopObservationInvocation(MethodVisitor mv) {
-        mv.visitMethodInsn(INVOKESTATIC, OBSERVE_UTILS, "stopObservation", "()V", false);
+    static void emitStopObservationInvocation(MethodVisitor mv, int strandIndex) {
+
+        mv.visitVarInsn(ALOAD, strandIndex);
+        mv.visitMethodInsn(INVOKESTATIC, OBSERVE_UTILS, "stopObservation",
+                String.format("(L%s;)V", STRAND), false);
     }
 
-    static void emitReportErrorInvocation(MethodVisitor mv, int errorIndex) {
+    static void emitReportErrorInvocation(MethodVisitor mv, int strandIndex, int errorIndex) {
+
+        mv.visitVarInsn(ALOAD, strandIndex);
         mv.visitVarInsn(ALOAD, errorIndex);
-        mv.visitMethodInsn(INVOKESTATIC, OBSERVE_UTILS, "reportError", String.format("(L%s;)V", ERROR_VALUE), false);
+        mv.visitMethodInsn(INVOKESTATIC, OBSERVE_UTILS, "reportError",
+                String.format("(L%s;L%s;)V", STRAND, ERROR_VALUE), false);
     }
 
-    static void emitStartObservationInvocation(MethodVisitor mv, String serviceOrConnectorName,
+    static void emitStartObservationInvocation(MethodVisitor mv, int strandIndex, String serviceOrConnectorName,
+                                               String resourceOrActionName, String observationStartMethod) {
+        emitStartObservationInvocation(mv, strandIndex, serviceOrConnectorName, resourceOrActionName,
+                observationStartMethod, null);
+    }
+
+    static void emitStartObservationInvocation(MethodVisitor mv, int strandIndex, String serviceOrConnectorName,
                                                String resourceOrActionName, String observationStartMethod,
                                                Map<String, String> tags) {
+        mv.visitVarInsn(ALOAD, strandIndex);
         mv.visitLdcInsn(cleanUpServiceName(serviceOrConnectorName));
         mv.visitLdcInsn(resourceOrActionName);
 
-        mv.visitTypeInsn(NEW, MAP_VALUE_IMPL);
-        mv.visitInsn(DUP);
-        mv.visitMethodInsn(INVOKESPECIAL, MAP_VALUE_IMPL, "<init>", "()V", false);
-        for (Map.Entry<String, String> entry : tags.entrySet()) {
+        if (tags != null) {
+            mv.visitTypeInsn(NEW, "java/util/HashMap");
             mv.visitInsn(DUP);
-            mv.visitLdcInsn(entry.getKey());
-            mv.visitLdcInsn(entry.getValue());
-            mv.visitMethodInsn(INVOKEINTERFACE, MAP_VALUE, "put",
-                    String.format("(L%s;L%s;)L%s;", OBJECT, OBJECT, OBJECT), true);
-            mv.visitInsn(POP);
+            mv.visitLdcInsn(tags.size());
+            mv.visitInsn(L2I);
+            mv.visitMethodInsn(INVOKESPECIAL, "java/util/HashMap", "<init>", "(I)V", false);
+            for (Map.Entry<String, String> entry : tags.entrySet()) {
+                mv.visitInsn(DUP);
+                mv.visitLdcInsn(entry.getKey());
+                mv.visitLdcInsn(entry.getValue());
+                mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "put",
+                        String.format("(L%s;L%s;)L%s;", OBJECT, OBJECT, OBJECT), true);
+                mv.visitInsn(POP);
+            }
+        } else {
+            mv.visitMethodInsn(INVOKESTATIC, "java/util/Collections", "emptyMap",
+                    String.format("()L%s;", MAP), false);
         }
 
         mv.visitMethodInsn(INVOKESTATIC, OBSERVE_UTILS, observationStartMethod,
-                String.format("(L%s;L%s;L%s;)V", STRING_VALUE, STRING_VALUE, MAP_VALUE), false);
+                String.format("(L%s;L%s;L%s;L%s;)V", STRAND, STRING_VALUE, STRING_VALUE, MAP), false);
     }
 
     private static String cleanUpServiceName(String serviceName) {
@@ -91,5 +117,26 @@ class JvmObservabilityGen {
             return funcName;
         }
         return moduleOrg + "/" + moduleName + "/" + funcName;
+    }
+
+    static boolean isFunctionObserved(BIRFunction func) {
+        boolean isObserved = false;
+        String funcName = JvmMethodGen.cleanupFunctionName(func.name.value);
+        if (!Objects.equals(funcName, "__init") && !Objects.equals(funcName, "$__init$")) {
+            boolean isRemote = (func.flags & Flags.REMOTE) == Flags.REMOTE;
+            if (isRemote) {
+                isObserved = true;
+            } else {
+                for (BIRAnnotationAttachment attachment : func.annotAttachments) {
+                    String annotationFQN = attachment.packageID.orgName + "/" + attachment.packageID.name + "/"
+                            + attachment.annotTagRef.value;
+                    if (Objects.equals(annotationFQN, OBSERVABLE_ANNOTATION)) {
+                        isObserved = true;
+                        break;
+                    }
+                }
+            }
+        }
+        return isObserved;
     }
 }
