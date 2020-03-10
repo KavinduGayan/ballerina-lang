@@ -31,8 +31,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.ballerinalang.observe.trace.extension.choreo.Constants.APPLICATION_ID_CONFIG;
-import static org.ballerinalang.observe.trace.extension.choreo.Constants.DEFAULT_APPLICATION_ID;
 import static org.ballerinalang.observe.trace.extension.choreo.Constants.DEFAULT_REPORTER_HOSTNAME;
 import static org.ballerinalang.observe.trace.extension.choreo.Constants.DEFAULT_REPORTER_PORT;
 import static org.ballerinalang.observe.trace.extension.choreo.Constants.DEFAULT_REPORTER_USE_SSL;
@@ -60,9 +58,9 @@ public class ChoreoClientHolder {
             MetadataReader metadataReader;
             try {
                 metadataReader = new MetadataReader();
-                LOGGER.debug("Successfully read sequence diagram symbols");
+                LOGGER.debug("successfully read sequence diagram symbols");
             } catch (IOException e) {
-                LOGGER.error("Failed to initialize Choreo client. " + e.getMessage());
+                LOGGER.error("failed to initialize Choreo client " + e.getMessage());
                 return null;
             }
 
@@ -73,11 +71,9 @@ public class ChoreoClientHolder {
                     String.valueOf(DEFAULT_REPORTER_PORT)));
             boolean useSSL = Boolean.parseBoolean(configRegistry.getConfigOrDefault(
                     getFullQualifiedConfig(REPORTER_USE_SSL_CONFIG), String.valueOf(DEFAULT_REPORTER_USE_SSL)));
-            String appId = configRegistry.getConfigOrDefault(getFullQualifiedConfig(APPLICATION_ID_CONFIG),
-                    DEFAULT_APPLICATION_ID);
 
             String instanceId = getInstanceId();
-            initializeLinkWithChoreo(hostname, port, useSSL, metadataReader, instanceId, appId);
+            initializeLinkWithChoreo(hostname, port, useSSL, metadataReader, instanceId);
             Thread shutdownHook = new Thread(() -> {
                 try {
                     choreoClientDependents.forEach(dependent -> {
@@ -136,10 +132,10 @@ public class ChoreoClientHolder {
     }
 
     private static void initializeLinkWithChoreo(String hostname, int port, boolean useSSL,
-                                                 MetadataReader metadataReader, String instanceId, String appId) {
+                                                 MetadataReader metadataReader, String instanceId) {
         choreoClient = new ChoreoClient(hostname, port, useSSL);
-        String observabilityUrl = choreoClient.register(metadataReader, instanceId, appId);
-        LOGGER.info("visit " + observabilityUrl.replaceAll("%", "%%") + " to access observability data");
+        String observabilityUrl = choreoClient.register(metadataReader, instanceId);
+        LOGGER.info("visit " + observabilityUrl + " to access observability data");
     }
 
     public static String getFullQualifiedConfig(String configName) {

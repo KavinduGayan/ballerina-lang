@@ -16,7 +16,6 @@
 
 package org.ballerinalang.observe.trace.extension.choreo;
 
-import org.ballerinalang.jvm.StringUtils;
 import org.ballerinalang.jvm.observability.metrics.Counter;
 import org.ballerinalang.jvm.observability.metrics.DefaultMetricRegistry;
 import org.ballerinalang.jvm.observability.metrics.Gauge;
@@ -26,7 +25,6 @@ import org.ballerinalang.jvm.observability.metrics.PolledGauge;
 import org.ballerinalang.jvm.observability.metrics.Snapshot;
 import org.ballerinalang.jvm.observability.metrics.Tag;
 import org.ballerinalang.jvm.observability.metrics.spi.MetricReporter;
-import org.ballerinalang.jvm.values.api.BValueCreator;
 import org.ballerinalang.observe.trace.extension.choreo.client.ChoreoClient;
 import org.ballerinalang.observe.trace.extension.choreo.client.ChoreoClientHolder;
 import org.ballerinalang.observe.trace.extension.choreo.logging.LogFactory;
@@ -57,7 +55,7 @@ public class MetricsReporterExtension implements MetricReporter, AutoCloseable {
     public void init() {
         ChoreoClient choreoClient = ChoreoClientHolder.getChoreoClient(this);
         if (Objects.isNull(choreoClient)) {
-            throw BValueCreator.createErrorValue(StringUtils.fromString("Choreo client is not initialized"), null);
+            throw new IllegalStateException("Choreo client is not initialized");
         }
 
         task = new Task(choreoClient);
@@ -111,7 +109,8 @@ public class MetricsReporterExtension implements MetricReporter, AutoCloseable {
                     long value = counter.getValue();
                     counter.reset();
                     tags.put("timeWindow", String.valueOf(currentTimestamp - lastCounterResetTimestamp));
-                    ChoreoMetric counterMetric = new ChoreoMetric(currentTimestamp, metricName, value, tags);
+                    ChoreoMetric counterMetric = new ChoreoMetric(currentTimestamp, metricName + "_count",
+                            value, tags);
                     choreoMetrics.add(counterMetric);
                 } else if (metric instanceof Gauge) {
                     for (Snapshot snapshot : ((Gauge) metric).getSnapshots()) {
