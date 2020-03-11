@@ -1184,7 +1184,7 @@ public class JvmTerminatorGen {
                                   boolean isObserved /* = false */, int localVarOffset /* = -1 */) {
 
             if (isObserved) {
-                emitStopObservationInvocation(this.mv, localVarOffset);
+                emitStopObservationInvocation(this.mv);
             }
             BType bType = func.type.retType;
             if (bType.tag == TypeTags.NIL) {
