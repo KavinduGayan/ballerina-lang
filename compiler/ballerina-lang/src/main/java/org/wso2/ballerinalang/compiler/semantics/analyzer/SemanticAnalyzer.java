@@ -324,6 +324,8 @@ public class SemanticAnalyzer extends BLangNodeVisitor {
             funcNode.symbol.enclForkName = funcNode.anonForkName;
         }
 
+        funcNode.symbol.annAttachments.addAll(funcNode.annAttachments);
+
         this.processWorkers(funcNode, funcEnv);
     }
 
