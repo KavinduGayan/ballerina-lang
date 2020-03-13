@@ -66,6 +66,6 @@ public class ObservableClientConnectorListener extends ClientConnectorListener {
     private void addHttpStatusCode(int statusCode) {
         Optional<ObserverContext> observerContext = ObserveUtils.getObserverContextOfCurrentFrame(context.getStrand());
         observerContext.ifPresent(ctx -> ctx.addTag(ObservabilityConstants.TAG_KEY_HTTP_STATUS_CODE_GROUP,
-                statusCode / 100 + STATUS_CODE_GROUP_SUFFIX));
+                String.valueOf(statusCode).charAt(0) + STATUS_CODE_GROUP_SUFFIX));
     }
 }

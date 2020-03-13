@@ -74,7 +74,7 @@ public class FunctionUtils {
                     responseObserver.onCompleted();
                 }
                 observerContext.ifPresent(ctx -> ctx.addTag(TAG_KEY_HTTP_STATUS_CODE_GROUP,
-                        HttpResponseStatus.OK.code() / 100 + STATUS_CODE_GROUP_SUFFIX));
+                        HttpResponseStatus.OK.codeAsText().toString().charAt(0) + STATUS_CODE_GROUP_SUFFIX));
             } catch (Exception e) {
                 LOG.error("Error while sending complete message to caller.", e);
                 return MessageUtils.getConnectorError(e);
@@ -184,7 +184,8 @@ public class FunctionUtils {
                             x -> observerContext.ifPresent(ctx -> ctx.addTag(x.getKey(), x.getValue())));
                 }
                 observerContext.ifPresent(ctx -> ctx.addTag(TAG_KEY_HTTP_STATUS_CODE_GROUP,
-                        getMappingHttpStatusCode((int) statusCode) / 100 + STATUS_CODE_GROUP_SUFFIX));
+                        String.valueOf(getMappingHttpStatusCode((int) statusCode)).charAt(0) +
+                                STATUS_CODE_GROUP_SUFFIX));
                 responseObserver.onError(errorMessage);
             } catch (Exception e) {
                 LOG.error("Error while sending error to caller.", e);

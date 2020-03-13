@@ -33,7 +33,6 @@ public class ObservabilityConstants {
     public static final String KEY_TRACE_CONTEXT = "_trace_context_";
     public static final String KEY_OBSERVER_CONTEXT = "__observer_context__";
     public static final String UNKNOWN_SERVICE = "Unknown Service";
-    public static final String UNKNOWN_RESOURCE = "Unknown Resource";
     public static final String UNKNOWN_CONNECTOR = "Unknown";
 
     public static final String SERVER_CONNECTOR_HTTP = "http";
@@ -61,7 +60,6 @@ public class ObservabilityConstants {
     public static final String PROPERTY_BSTRUCT_ERROR = "bstruct_error";
 
     public static final String STATUS_CODE_GROUP_SUFFIX = "xx";
-    public static final String INTERNAL_SERVER_ERROR_STATUS_CODE_GROUP = "5xx";
 
     // TOML Configs
     public static final String CONFIG_TABLE_OBSERVABILITY = "b7a.observability";

@@ -21,13 +21,14 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import org.ballerinalang.jvm.observability.ObserverContext;
 import org.ballerinalang.jvm.values.ErrorValue;
 import org.ballerinalang.net.grpc.Message;
+import org.ballerinalang.net.grpc.Status;
 import org.ballerinalang.net.grpc.StreamObserver;
 import org.ballerinalang.net.grpc.listener.ServerCallHandler;
 
-import static org.ballerinalang.jvm.observability.ObservabilityConstants.INTERNAL_SERVER_ERROR_STATUS_CODE_GROUP;
 import static org.ballerinalang.jvm.observability.ObservabilityConstants.STATUS_CODE_GROUP_SUFFIX;
 import static org.ballerinalang.jvm.observability.ObservabilityConstants.TAG_KEY_HTTP_STATUS_CODE_GROUP;
 import static org.ballerinalang.net.grpc.GrpcConstants.EMPTY_DATATYPE_NAME;
+import static org.ballerinalang.net.grpc.MessageUtils.getMappingHttpStatusCode;
 
 /**
  * Call back class registered for streaming gRPC service in B7a executor.
@@ -66,8 +67,8 @@ public class UnaryCallableUnitCallBack extends AbstractCallableUnitCallBack {
             requestSender.onNext(new Message(EMPTY_DATATYPE_NAME, null));
         }
         if (observerContext != null) {
-            observerContext.addTag(TAG_KEY_HTTP_STATUS_CODE_GROUP, HttpResponseStatus.OK.code() / 100 +
-                    STATUS_CODE_GROUP_SUFFIX);
+            observerContext.addTag(TAG_KEY_HTTP_STATUS_CODE_GROUP, HttpResponseStatus.OK.codeAsText().toString().
+                    charAt(0) + STATUS_CODE_GROUP_SUFFIX);
         }
         // Notify complete if service impl doesn't call complete;
         requestSender.onCompleted();
@@ -77,7 +78,8 @@ public class UnaryCallableUnitCallBack extends AbstractCallableUnitCallBack {
     public void notifyFailure(ErrorValue error) {
         handleFailure(requestSender, error);
         if (observerContext != null) {
-            observerContext.addTag(TAG_KEY_HTTP_STATUS_CODE_GROUP, INTERNAL_SERVER_ERROR_STATUS_CODE_GROUP);
+            observerContext.addTag(TAG_KEY_HTTP_STATUS_CODE_GROUP, String.valueOf(getMappingHttpStatusCode(
+                    Status.Code.INTERNAL.value())).charAt(0) + STATUS_CODE_GROUP_SUFFIX);
         }
         super.notifyFailure(error);
     }
