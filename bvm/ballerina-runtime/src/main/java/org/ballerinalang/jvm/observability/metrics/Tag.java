@@ -34,7 +34,7 @@ public final class Tag implements Comparable<Tag> {
         this.key = requireNonNull(key);
         this.value = requireNonNull(value);
         // Compute hash of this immutable Tag
-        this.hashCode = Objects.hash(key, value);
+        this.hashCode = Objects.hash(key);
     }
 
     public static Tag of(String key, String value) {
@@ -63,8 +63,7 @@ public final class Tag implements Comparable<Tag> {
             return false;
         }
         Tag tag = (Tag) o;
-        return Objects.equals(key, tag.key) &&
-                Objects.equals(value, tag.value);
+        return Objects.equals(key, tag.key);
     }
 
     @Override
